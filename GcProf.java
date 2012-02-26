@@ -15,7 +15,9 @@
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -60,6 +62,9 @@ public class GcProf {
             nwork = getnostrichwork(nostrichwork);
           else
             nwork = getnwork(nworkpath);
+          
+          if (nwork == -1L) continue;
+          
           if (nwork < 0) nwork = 1;
 
           if (!warm) {
@@ -112,7 +117,10 @@ public class GcProf {
       return -1L;
 
     String[] ps = splitPath(path);
-    return getlong(getClass(ps[0]), ps[1]);
+    Class<?> c = getClass(ps[0]);
+    if(c!=null) {
+    	return getlong(c, ps[1]);
+    } else return -1L;
   }
 
   static private long getnostrichwork(String name) {
@@ -129,8 +137,9 @@ public class GcProf {
       return (Long)o;
     } catch (Exception e) {
       e.printStackTrace();
-      panic("failed to load ostrich "+e);
-      return -1;
+      System.err.println("failed to load ostrich "+e);
+      //panic("failed to load ostrich "+e);
+      return -1L;
     }
   }
 
@@ -142,6 +151,11 @@ public class GcProf {
   static private long getlong(Class<?> cls, String member) {
     Object o = getMember(cls, member);
 
+    if (o == null) {
+        System.err.println("could not find object in "+member);
+        return -1L;
+    }
+    
     if (o instanceof AtomicInteger)
       return ((AtomicInteger)o).get();
     if(o instanceof AtomicLong)
@@ -149,7 +163,8 @@ public class GcProf {
     if (o instanceof Number)
       return ((Number)o).longValue();
 
-    panic("could not find object in "+member);
+    System.err.println("could not find object in "+member);
+    //panic("could not find object in "+member);
     return -1L;
   }
 
@@ -190,31 +205,40 @@ public class GcProf {
         cls = o.getClass();
         continue;
       } catch (NoSuchFieldException e) {
-        panic("cannot find \""+path+"\" in "+cls);
+        //panic("cannot find \""+path+"\" in "+cls);
+    	  System.err.println("cannot find \""+path+"\" in "+cls);
+    	  break;
       } catch (IllegalAccessException e) {
         panic("IllegalAccessException ("+p+") in "+path);
       }
 
-      panic("cannot find \""+p+"\" in "+cls);
+      //panic("cannot find \""+p+"\" in "+cls);
+      System.err.println("cannot find \""+p+"\" in "+cls);
     }
 
     return o;
   }
 
   static private Class<?> getClass(String fullClassName) {
-    ClassLoader loader = getloader();
+    List<ClassLoader> loader = getloader();
     Class<?> cls = null;
-
-    try {
-      cls = Class.forName(fullClassName, true, loader);
-    } catch (ClassNotFoundException e) {
-      panic("cannot find class \"" + fullClassName + "\"");
+    boolean found = false;
+    for(ClassLoader l : loader) {
+        try {
+        	cls = Class.forName(fullClassName, true, l);
+        	found = true;
+            break;
+        } catch (ClassNotFoundException e) {
+        		
+        }
     }
-
+    
+    if(!found) System.err.println("cannot find class \"" + fullClassName + "\"");  
+    
     return cls;
   }
 
-  static private ClassLoader getloader() {
+  static private List<ClassLoader> getloader() {
     ThreadGroup g = Thread.currentThread().getThreadGroup();
       for (;;) {
         ThreadGroup g0 = g.getParent();
@@ -226,11 +250,23 @@ public class GcProf {
       Thread[] active = new Thread[g.activeCount()];
       g.enumerate(active);
 
+      // Change to return a list of the current class loaders in operation
+      // an App Server, i.e. tomcat, has a few classloaders.  If we are gc modelling a
+      // web app, we need to get hold of the webapp classloader.
+      //
+      // TODO find the classloader for a specific webapp (incase of multiple)
+      //
       ClassLoader loader = ClassLoader.getSystemClassLoader();
-      for (Thread t : active)
-        if (t != Thread.currentThread())
-          loader = t.getContextClassLoader();
+      List<ClassLoader> loaders = new ArrayList<ClassLoader>();
+      loaders.add(loader);
+      
+      for (Thread t : active) {
+			if (t != Thread.currentThread()) {
+				if (t != null)
+					loaders.add(t.getContextClassLoader());
+			}
+      }
 
-    return loader;
+    return loaders;
   }
 }
