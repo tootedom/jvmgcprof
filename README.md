@@ -104,8 +104,8 @@ gcprof [-p period] [-n class:fieldpath] [-no ostrichcounter] [-w nwarmup] java .
 
 	make clean install
 	
-	This will install into /tmp/gcusage.  In a java application you can 
-	add to the start up of the program the following:
+  This will install into /tmp/gcusage.  In a java application you can 
+  add to the start up of the program the following:
 	
 	#install location
 	gclibdir=/tmp/gcusage
@@ -114,7 +114,7 @@ gcprof [-p period] [-n class:fieldpath] [-no ostrichcounter] [-w nwarmup] java .
 	export COUNTER="bbc.forge.domt.hello.web.HelloController:noOfFiveMBClassRequests"
 	export JAVA_OPTS="-Xbootclasspath/a:${gclibdir} -agentlib:gcprof -Dgcprof.period=1 -Dgcprof.nwork=${COUNTER} ${JAVA_OPTS}"
 	
-	The above will look for the noOfFiveMBClassRequests static counter, outputting every 1 second
+  The above will look for the noOfFiveMBClassRequests static counter, outputting every 1 second
 	
 
 ## Bugs
