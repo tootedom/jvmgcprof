@@ -1,5 +1,7 @@
 CC=gcc
 OS=$(shell uname -s | tr '[A-Z]' '[a-z]')
+prefix := /tmp/gcusage
+
 
 ifeq ("$(OS)", "darwin")
 JAVE_HOME=$(shell /usr/libexec/java_home)
@@ -16,6 +18,13 @@ CFLAGS=-Ijava_crw_demo -fno-strict-aliasing                                  \
         -I$(JAVA_HEADERS)
 LDFLAGS=-fno-strict-aliasing -fPIC -fno-omit-frame-pointer \
         -static-libgcc -mimpure-text -shared
+
+install: all
+	test -d $(prefix) || mkdir $(prefix)
+	install -m 0755 libgcprof.jnilib $(prefix)/
+	install -m 0755 GcProf*.class $(prefix)/
+	install -m 0755 gcprof $(prefix)/
+	ln -fs $(prefix)/libgcprof.jnilib $(prefix)/libgcprof.so
 
 all: libgcprof.jnilib GcProf.class
 
