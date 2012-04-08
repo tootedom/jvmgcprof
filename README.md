@@ -99,6 +99,23 @@ gcprof [-p period] [-n class:fieldpath] [-no ostrichcounter] [-w nwarmup] java .
   distribution also changed: the tail is longer in requests processed
   but shorter in allocation.  Presumably this is due to the improved
   throughput of the balancer.
+  
+## Install
+
+	make clean install
+	
+	This will install into /tmp/gcusage.  In a java application you can 
+	add to the start up of the program the following:
+	
+	#install location
+	gclibdir=/tmp/gcusage
+	export LD_LIBRARY_PATH=$gclibdir:$LD_LIBRARY_PATH	
+	# Your counter
+	export COUNTER="bbc.forge.domt.hello.web.HelloController:noOfFiveMBClassRequests"
+	export JAVA_OPTS="-Xbootclasspath/a:${gclibdir} -agentlib:gcprof -Dgcprof.period=1 -Dgcprof.nwork=${COUNTER} ${JAVA_OPTS}"
+	
+	The above will look for the noOfFiveMBClassRequests static counter, outputting every 1 second
+	
 
 ## Bugs
 
